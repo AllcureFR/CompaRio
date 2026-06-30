@@ -284,11 +284,74 @@
   function nextStep() { if (currentStep < totalSteps) { currentStep++; showStep(currentStep); } }
   function prevStep() { if (currentStep > 1) { currentStep--; showStep(currentStep); } }
 
-  function submitTunnel() {
-    const email = document.getElementById('email').value;
-    const tel = document.getElementById('telephone').value;
-    if (!email || !tel) { alert('Merci de renseigner votre email et téléphone.'); return; }
-    alert('Merci\u00a0! Un conseiller Achouri Consulting recherche vos avoirs LPP et vous contacte sous 24h — 100% gratuit.');
+  async function submitTunnel() {
+    const email   = document.getElementById('email').value.trim();
+    const tel     = document.getElementById('telephone').value.trim();
+    const prenom  = document.getElementById('prenom').value.trim();
+    const nom     = document.getElementById('nom').value.trim();
+    if (!email || !tel || !prenom || !nom) { alert('Merci de renseigner votre prénom, nom, email et téléphone.'); return; }
+
+    const now = new Date();
+    const leadId = 'LPP-' + now.getTime() + '-' + Math.random().toString(36).substr(2, 8);
+    const dateStr = now.toLocaleString('fr-CH', { timeZone: 'Europe/Zurich' });
+
+    const objectif = answers['opt-objectif'] || 'Non renseigné';
+    const statut   = answers['opt-statut']   || 'Non renseigné';
+    const annees   = answers['opt-annees']   || 'Non renseigné';
+    const naissance = document.getElementById('anneeNaissance').value || 'Non renseigné';
+
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+    const appareil = isMobile ? 'Mobile' : 'Desktop';
+    const navigateur = navigator.userAgent.includes('Chrome') ? 'Chrome'
+                      : navigator.userAgent.includes('Safari') ? 'Safari'
+                      : navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Autre';
+
+    const payload = {
+      _subject: `🦁 Nouveau lead 2ème Pilier LPP — ${prenom} ${nom}`,
+      'Prénom': prenom,
+      'Nom': nom,
+      'Email': email,
+      'Téléphone': tel,
+      'Objectif': objectif,
+      'Statut professionnel': statut,
+      'Années travaillées en Suisse': annees,
+      'Année de naissance': naissance,
+      'ID Lead': leadId,
+      'Date et heure': dateStr,
+      'Type tunnel': '2ème Pilier LPP',
+      'Appareil': appareil,
+      'Navigateur': navigateur,
+      'URL page': window.location.href,
+    };
+
+    const btn = document.querySelector('.step[data-step="6"] .btn-next');
+    if (btn) { btn.textContent = 'Envoi en cours...'; btn.disabled = true; }
+
+    try {
+      const response = await fetch('https://formspree.io/f/xqevlvkj', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        document.getElementById('tunnelForm').innerHTML = `
+          <div style="text-align:center;padding:40px 20px;">
+            <div style="font-size:60px;margin-bottom:16px;">🦁</div>
+            <h2 style="font-family:'Baloo 2',cursive;font-size:24px;color:var(--dark);margin-bottom:12px;">Merci ${prenom}&nbsp;!</h2>
+            <p style="font-size:15px;color:var(--ink-soft);line-height:1.6;margin-bottom:20px;">
+              Votre demande a bien été reçue.<br>
+              Un conseiller Achouri Consulting recherche vos avoirs LPP et vous contacte <strong>sous 24h</strong> — gratuitement.
+            </p>
+            <p style="font-size:13px;color:var(--ink-soft);">📞 ${tel}<br>📧 ${email}</p>
+          </div>`;
+      } else {
+        throw new Error('Erreur serveur');
+      }
+    } catch (err) {
+      if (btn) { btn.textContent = 'Retrouver mes avoirs →'; btn.disabled = false; }
+      alert('Une erreur est survenue. Veuillez réessayer ou nous contacter directement au +41 79 483 13 79');
+    }
   }
 </script>
 </body>
